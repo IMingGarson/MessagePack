@@ -1,15 +1,15 @@
+import { setUint64, setInt64 } from '../utils/Int';
 
 export const DEFAULT_MAX_DEPTH = 100;
 export const DEFAULT_INITIAL_BUFFER_SIZE = 2048;
 
 export class Encoder<ContextType = undefined> {
-    // current butter position
+    // current butter positionS
     private pos = 0;
     private view = new DataView(new ArrayBuffer(this.initialBufferSize));
     private bytes = new Uint8Array(this.view.buffer);
 
     public constructor (
-        private readonly context: ContextType = undefined as any,
         private readonly maxDepth = DEFAULT_MAX_DEPTH,
         private readonly initialBufferSize = DEFAULT_INITIAL_BUFFER_SIZE 
     ) {}
@@ -23,7 +23,7 @@ export class Encoder<ContextType = undefined> {
     {
         this.reinitializeState();
         this.encodeByType(object, 1);
-        return this.bytes.slice(0, this.pos);
+        return this.bytes.subarray(0, this.pos);
     }
 
     private encodeByType(object: unknown, depth: number): void
@@ -38,9 +38,10 @@ export class Encoder<ContextType = undefined> {
             this.encodeBoolean(object);
         } else if (typeof object === "number") {
             this.encodeNumber(object);
-        } else if (typeof object === "string") {
-            this.encodeString(object);
         } 
+        // else if (typeof object === "string") {
+        //     this.encodeString(object);
+        // } 
         // else {
         //     this.encodeObject(object, depth);
         // }
@@ -65,9 +66,56 @@ export class Encoder<ContextType = undefined> {
         if (!Number.isSafeInteger(object)) {
             throw new Error('Unsafe Integer Detected.');
         }
-        // We take care of non-negative number first
+        // Handle Uint
         if (object >= 0) {
+            // positive fixint - stores 7-bit positive integer, ranging from -128 to 127
+            if (object < 0x80) {
+                this.writeU8(object);
+            }
+            // uint 8 stores a 8-bit unsigned integer, ranging from 0 to 255
+            else if (object < 0x100) {
+                this.writeU8(0xcc);
+                this.writeU8(object);
+            }
+            // uint 16 stores a 16-bit big-endian unsigned integer, raning from 0 to 65535
+            else if (object < 0x10000) {
+                this.writeU8(0xcd);
+                this.writeU16(object);
+            }
+            // uint 32 stores a 32-bit big-endian unsigned integer, raning from 0 to 4294967295
+            else if (object < 0x100000000) {
+                this.writeU8(0xce);
+                this.writeU32(object);
+            }
+            // uint 64 stores a 64-bit big-endian unsigned integer, raning from 0 to 4503599627370496
+            else {
+                this.writeU8(0xcf);
+                this.writeU64(object);
+            }
+            return;
+        }
 
+        // Handle Int with sign
+        if (object >= -0x20) { // -32
+            this.writeU8(0xe0 | (object + 0x20));
+        }
+        // int 8, ranging from -128 to 127
+        else if (object >= -0x80) {
+            this.writeU8(0xd0);
+            this.writeI8(object);
+        }
+        // int 16, ranging from -32768 to 32767
+        else if (object >= -0x8000) {
+            this.writeU8(0xd1);
+            this.writeI16(object);
+        }
+        // int 32, ranging from -2147483648 to 2147483647
+        else if (object >= -0x80000000) {
+            this.writeU8(0xd2);
+            this.writeI32(object);
+        } else {
+            this.writeU8(0xd3);
+            this.writeI64(object);
         }
     }
 
@@ -82,6 +130,58 @@ export class Encoder<ContextType = undefined> {
 
         this.view.setUint8(this.pos, value);
         this.pos++;
+    }
+
+    private writeU16(value: number): void
+    {
+        this.ensureBufferSizeToWrite(2);
+
+        this.view.setUint16(this.pos, value);
+        this.pos += 2;
+    }
+
+    private writeU32(value: number): void
+    {
+        this.ensureBufferSizeToWrite(4);
+
+        this.view.setInt32(this.pos, value);
+        this.pos += 4;
+    }
+
+    private writeU64(value: number): void
+    {
+        this.ensureBufferSizeToWrite(8);
+
+        setUint64(this.view, this.pos, value);
+        this.pos += 8;
+    }
+
+    private writeI8(value: number): void {
+        this.ensureBufferSizeToWrite(1);
+
+        this.view.setInt8(this.pos, value);
+        this.pos++;
+    }
+
+    private writeI16(value: number): void {
+        this.ensureBufferSizeToWrite(2);
+    
+        this.view.setInt16(this.pos, value);
+        this.pos += 2;
+    }
+
+    private writeI32(value: number): void {
+        this.ensureBufferSizeToWrite(4);
+
+        this.view.setInt32(this.pos, value);
+        this.pos += 4;
+    }
+
+    private writeI64(value: number) {
+        this.ensureBufferSizeToWrite(8);
+
+        setInt64(this.view, this.pos, value);
+        this.pos += 8;
     }
 
     private ensureBufferSizeToWrite(neededSize: number): void
