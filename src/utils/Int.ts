@@ -5,7 +5,7 @@ export function setUint64(view: DataView, offset: number, value: number): void {
 
 export function setInt64(view: DataView, offset: number, value: number): void {
     const high = Math.floor(value / 0x1_0000_0000);
-    const low = value; // high bits are truncated by DataView
+    const low = value;
     view.setUint32(offset, high);
     view.setUint32(offset + 4, low);
 }

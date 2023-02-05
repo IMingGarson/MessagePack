@@ -1,4 +1,5 @@
 import { setUint64, setInt64 } from '../utils/Int';
+import { getStringSizeInByte, utf8Encode } from '../utils/utf8';
 
 export const DEFAULT_MAX_DEPTH = 100;
 export const DEFAULT_INITIAL_BUFFER_SIZE = 2048;
@@ -38,10 +39,9 @@ export class Encoder<ContextType = undefined> {
             this.encodeBoolean(object);
         } else if (typeof object === "number") {
             this.encodeNumber(object);
+        } else if (typeof object === "string") {
+            this.encodeString(object);
         } 
-        // else if (typeof object === "string") {
-        //     this.encodeString(object);
-        // } 
         // else {
         //     this.encodeObject(object, depth);
         // }
@@ -97,6 +97,7 @@ export class Encoder<ContextType = undefined> {
 
         // Handle Int with sign
         if (object >= -0x20) { // -32
+            // 0xe0 is a 3 leading-one mask
             this.writeU8(0xe0 | (object + 0x20));
         }
         // int 8, ranging from -128 to 127
@@ -121,7 +122,37 @@ export class Encoder<ContextType = undefined> {
 
     private encodeString(object: string): void
     {
+        const maxHeaderSize = 5;
+        const byteLen = getStringSizeInByte(object);
+        this.ensureBufferSizeToWrite(maxHeaderSize + byteLen);
+        // Write string header
+        this.writeStringHeader(byteLen);
+        // Write string data
+        utf8Encode(object, this.bytes, this.pos);
+        
+        this.pos += byteLen;
+    }
 
+    private writeStringHeader(byteLen: number): void
+    {
+        if (byteLen < 32) {
+            // fixstr 0xa0 = 10100000 in binary
+            this.writeU8(0xa0 + byteLen);
+        } else if (byteLen < 0x100) {
+            // str 8 stores a byte array whose length is upto (2^8)-1 bytes
+            this.writeU8(0xd9)
+            this.writeU8(byteLen);
+        } else if (byteLen < 0x10000) {
+            // str 16 stores a byte array whose length is upto (2^16)-1 bytes:
+            this.writeU8(0xda)
+            this.writeU16(byteLen);
+        } else if (byteLen < 0x100000000) {
+            // str 32 stores a byte array whose length is upto (2^32)-1 bytes
+            this.writeU8(0xdb)
+            this.writeU32(byteLen);
+        } else {
+            throw new Error(`Maximum length encountered. ${byteLen} bytes in UTF-8`);
+        }
     }
 
     private writeU8(value: number): void 
