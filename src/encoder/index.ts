@@ -1,6 +1,8 @@
 import { setUint64, setInt64 } from '../utils/Int';
 import { getStringSizeInByte, utf8Encode } from '../utils/utf8';
 import { ExtensionCodec, ExtensionCodecType } from "../ExtensionCodec";
+import type { ExtData } from "../ExtData";
+import { ensureUint8Array } from "../utils/typedArrays";
 
 export const DEFAULT_MAX_DEPTH = 100;
 export const DEFAULT_INITIAL_BUFFER_SIZE = 2048;
@@ -49,7 +51,7 @@ export class Encoder<ContextType = undefined> {
         } else if (typeof object === "string") {
             this.encodeString(object);
         } else {
-            this.encodeObject(object);
+            this.encodeObject(object, depth);
         }
     }
 
@@ -148,9 +150,106 @@ export class Encoder<ContextType = undefined> {
         this.pos += byteLen;
     }
 
-    private encodeObject(object: object): void
+    private encodeObject(object: object, depth: number): void
     {
+        // try to encode objects with custom codec first of non-primitives
+        const ext = this.extensionCodec.tryToEncode(object, this.context);
+        if (ext != null) {
+            this.encodeExtension(ext);
+        } else if (Array.isArray(object)) {
+            this.encodeArray(object, depth);
+        } else if (ArrayBuffer.isView(object)) {
+            this.encodeBinary(object);
+        }
+    }
 
+    private encodeBinary(object: ArrayBufferView): void
+    {
+        const size = object.byteLength;
+        if (size < 0x100) {
+            // bin 8
+            this.writeU8(0xc4);
+            this.writeU8(size);
+        } else if (size < 0x10000) {
+            // bin 16
+            this.writeU8(0xc5);
+            this.writeU16(size);
+        } else if (size < 0x100000000) {
+            // bin 32
+            this.writeU8(0xc6);
+            this.writeU32(size);
+        } else {
+            throw new Error(`Too large binary: ${size}`);
+        }
+        const bytes = ensureUint8Array(object);
+        this.writeU8a(bytes);
+    } 
+
+    private encodeArray(object: Array<unknown>, depth: number): void 
+    {
+        const size = object.length;
+        if (size < 16) {
+            // fixarray
+            this.writeU8(0x90 + size);
+        } else if (size < 0x10000) {
+            // array 16
+            this.writeU8(0xdc);
+            this.writeU16(size);
+        } else if (size < 0x100000000) {
+            // array 32
+            this.writeU8(0xdd);
+            this.writeU32(size);
+        } else {
+            throw new Error(`Too large array: ${size}`);
+        }
+        for (const item of object) {
+            this.encodeByType(item, depth + 1);
+        }
+    }
+
+    private encodeExtension(ext: ExtData): void
+    {
+        const size = ext.data.length;
+        if (size === 1) {
+            // fixext 1
+            this.writeU8(0xd4);
+        } else if (size === 2) {
+            // fixext 2
+            this.writeU8(0xd5);
+        } else if (size === 4) {
+            // fixext 4
+            this.writeU8(0xd6);
+        } else if (size === 8) {
+            // fixext 8
+            this.writeU8(0xd7);
+        } else if (size === 16) {
+            // fixext 16
+            this.writeU8(0xd8);
+        } else if (size < 0x100) {
+            // ext 8
+            this.writeU8(0xc7);
+            this.writeU8(size);
+        } else if (size < 0x10000) {
+            // ext 16
+            this.writeU8(0xc8);
+            this.writeU16(size);
+        } else if (size < 0x100000000) {
+            // ext 32
+            this.writeU8(0xc9);
+            this.writeU32(size);
+        } else {
+            throw new Error(`Too large extension object: ${size}`);
+        }
+        this.writeI8(ext.type);
+        this.writeU8a(ext.data);
+    }
+
+    private writeU8a(values: ArrayLike<number>) {
+        const size = values.length;
+        this.ensureBufferSizeToWrite(size);
+
+        this.bytes.set(values, this.pos);
+        this.pos += size;
     }
 
     private writeStringHeader(byteLen: number): void
