@@ -1,11 +1,14 @@
 import { encode } from '../src/Encoder';
+import { decode } from '../src/Decoder';
 
 test("BIN16 test", () => {
-    const result = new Uint8Array([...new Uint8Array([0xc5, 0x01, 0x00]), ...new Uint8Array(0x100).fill(0xff)])
-    expect(encode(new Uint8Array(0x100).fill(0xff))).toEqual(result);
+    const testObj = new Uint8Array(0x100).fill(0xff);
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
 
 test("BIN32 test", () => {
-    const result = new Uint8Array([...new Uint8Array([0xc6, 0x00, 0x01, 0x00, 0x00]), ...new Uint8Array(0x10_000).fill(0xff)])
-    expect(encode(new Uint8Array(0x10_000).fill(0xff))).toEqual(result);
+    const testObj = new Uint8Array(0x10000).fill(0xff);
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });

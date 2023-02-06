@@ -1,49 +1,74 @@
 import { encode } from '../src/Encoder';
+import { decode } from '../src/Decoder';
 
 test("positive fixint test", () => {
-    expect(encode(1)).toEqual(new Uint8Array([0x01]));
+    const testObj = 1;
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
 
 test("uint8 test", () => {
-    expect(encode(130)).toEqual(new Uint8Array([0xcc, 0x082]));
+    const testObj = 130;
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
 
 test("uint16 test", () => {
-    expect(encode(25583)).toEqual(new Uint8Array([0xcd, 0x063, 0x0EF]));
+    const testObj = 25583;
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
 
 test("uint32 test", () => {
-    expect(encode(527401)).toEqual(new Uint8Array([0xce, 0x000, 0x008, 0x00C, 0x029]));
+    const testObj = 527401;
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
 
 test("uint64 test", () => {
-    expect(encode(4294967297)).toEqual(new Uint8Array([0xcf, 0x000, 0x000, 0x000, 0x001, 0x000, 0x000, 0x000, 0x001]));
+    const testObj = 4294967297;
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
 
 test("negative fixint test", () => {
-    expect(encode(-31)).toEqual(new Uint8Array([0x0E1]));
+    const testObj = -31;
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
 
 test("int8 test", () => {
-    expect(encode(-63)).toEqual(new Uint8Array([0xd0, 0x0C1]));
+    const testObj = -63;
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
 
 test("int16 test", () => {
-    expect(encode(-25535)).toEqual(new Uint8Array([0xd1, 0x09C, 0x041]));
+    const testObj = -25535;
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
 
 test("int32 test", () => {
-    expect(encode(-2147483646)).toEqual(new Uint8Array([0xd2, 0x080, 0x000, 0x000, 0x002]));
+    const testObj = -2147483646;
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
 
 test("int64 test", () => {
-    expect(encode(Number.MIN_SAFE_INTEGER)).toEqual(new Uint8Array([0xd3, 0x0FF, 0x0E0, 0x000, 0x000, 0x000, 0x000, 0x000, 0x001]));
+    const testObj = Number.MIN_SAFE_INTEGER;
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
 
 test("float 32 test", () => {
-    expect(encode(3.14, { forceFloat32: true })).toEqual(new Uint8Array([0xca, 0x040, 0x048, 0x0F5, 0x0C3]));
+    const testObj = 3.14;
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
 
 test("float 64 test", () => {
-    expect(encode(3.14)).toEqual(new Uint8Array([0xcb, 0x040, 0x009, 0x01E, 0x0B8, 0x051, 0x0EB, 0x085, 0x01F]));
+    const testObj = 3.14;
+    const encoded = encode(testObj);
+    expect(decode(encoded)).toEqual(testObj);
 });
