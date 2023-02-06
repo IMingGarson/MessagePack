@@ -50,8 +50,11 @@ export class Encoder<ContextType = undefined> {
             this.encodeNumber(object);
         } else if (typeof object === "string") {
             this.encodeString(object);
-        } else {
+        } else if (typeof object === "object") {
             this.encodeObject(object, depth);
+        } else {
+            // symbol, function and other special object come here unless extensionCodec handles them.
+            throw new Error(`Unrecognized object: ${Object.prototype.toString.apply(object)}`);
         }
     }
 
@@ -160,6 +163,40 @@ export class Encoder<ContextType = undefined> {
             this.encodeArray(object, depth);
         } else if (ArrayBuffer.isView(object)) {
             this.encodeBinary(object);
+        } else if (typeof object === "object") {
+            this.encodeMap(object as Record<string, unknown>, depth);
+        }
+    }
+
+    private encodeMap(object: Record<string, unknown>, depth: number): void
+    {
+        const keys = Object.keys(object);
+        if (this.sortKeys) {
+            keys.sort();
+        }
+        const size = this.ignoreUndefined ? this.countWithoutUndefined(object, keys) : keys.length;
+        if (size < 16) {
+            // fixmap
+            this.writeU8(0x80 + size);
+        } else if (size < 0x10000) {
+            // map 16
+            this.writeU8(0xde);
+            this.writeU16(size);
+        } else if (size < 0x100000000) {
+            // map 32
+            this.writeU8(0xdf);
+            this.writeU32(size);
+        } else {
+            throw new Error(`Too large map object: ${size}`);
+        }
+
+        for (const key of keys) {
+            const value = object[key];
+        
+            if (!(this.ignoreUndefined && value === undefined)) {
+                this.encodeString(key);
+                this.encodeByType(value, depth + 1);
+            }
         }
     }
 
@@ -372,5 +409,16 @@ export class Encoder<ContextType = undefined> {
 
         this.view = newView;
         this.bytes = newBytes;
+    }
+
+    private countWithoutUndefined(object: Record<string, unknown>, keys: ReadonlyArray<string>): number 
+    {
+        let count = 0;
+        for (const key of keys) {
+            if (object[key] !== undefined) {
+                count++;
+            }
+        }
+        return count;
     }
 }
