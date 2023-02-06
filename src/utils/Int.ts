@@ -1,3 +1,5 @@
+export const UINT32_MAX = 0xffff_ffff;
+
 export function setUint64(view: DataView, offset: number, value: number): void {
     view.setUint32(offset, value >> 32);
     view.setUint32(offset + 4, value & 0xffffffff); // mask first 32 bits
