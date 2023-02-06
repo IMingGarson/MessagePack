@@ -43,3 +43,11 @@ test("int32 test", () => {
 test("int64 test", () => {
     expect(encode(Number.MIN_SAFE_INTEGER)).toEqual(new Uint8Array([0xd3, 0x0FF, 0x0E0, 0x000, 0x000, 0x000, 0x000, 0x000, 0x001]));
 });
+
+test("float 32 test", () => {
+    expect(encode(3.14, { forceFloat32: true })).toEqual(new Uint8Array([0xca, 0x040, 0x048, 0x0F5, 0x0C3]));
+});
+
+test("float 64 test", () => {
+    expect(encode(3.14)).toEqual(new Uint8Array([0xcb, 0x040, 0x009, 0x01E, 0x0B8, 0x051, 0x0EB, 0x085, 0x01F]));
+});
