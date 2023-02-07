@@ -317,10 +317,10 @@ export class Decoder<ContextType = undefined> {
         if (byteLength > this.maxBinLength) {
             throw new DecodeError(`Max length exceeded: bin length (${byteLength}) > maxBinLength (${this.maxBinLength})`);
         }
-
-        // if (!this.hasRemaining(byteLength + headOffset)) {
-        //     throw new DecodeError("Insufficient data");
-        // }
+        
+        if (!this.hasRemaining(byteLength + headOffset)) {
+            throw new DecodeError("Insufficient data");
+        }
 
         const offset = this.pos + headOffset;
         const object = this.bytes.subarray(offset, offset + byteLength);
@@ -342,14 +342,6 @@ export class Decoder<ContextType = undefined> {
 
         const offset = this.pos + headerOffset;
         let object: string;
-        // if (this.stateIsMapKey() && this.keyDecoder?.canBeCached(byteLength)) {
-        //     object = this.keyDecoder.decode(this.bytes, offset, byteLength);
-        // } else if (byteLength > TEXT_DECODER_THRESHOLD) {
-        //     object = utf8DecodeTD(this.bytes, offset, byteLength);
-        // } else {
-        //     object = utf8Decode(this.bytes, offset, byteLength);
-        // }
-        // TODO
         object = utf8Decode(this.bytes, offset, byteLength);
         this.pos += headerOffset + byteLength;
 
@@ -392,7 +384,7 @@ export class Decoder<ContextType = undefined> {
 
     private readHeadByte(): number 
     {
-        if (this.headByte === HEAD_BYTE_REQUIRED) {
+        if (this.headByte == HEAD_BYTE_REQUIRED) {
             this.headByte = this.readU8();
         }
 

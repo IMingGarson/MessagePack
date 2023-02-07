@@ -24,7 +24,8 @@ app.post('/api/encode', function (req, res) {
     const encoded = encoder(jsonData);
     let hexData = [];
     for (let i = 0; i < encoded.length; i++) {
-        hexData.push(encoded[i].toString(16).toUpperCase());
+        let hex = ('0000' + encoded[i].toString(16).toLowerCase()).substr(-2);
+        hexData.push(hex);
     }
 
     return res.render('index', {

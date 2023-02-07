@@ -323,9 +323,9 @@ class Decoder {
         if (byteLength > this.maxBinLength) {
             throw new DecodeError_1.DecodeError(`Max length exceeded: bin length (${byteLength}) > maxBinLength (${this.maxBinLength})`);
         }
-        // if (!this.hasRemaining(byteLength + headOffset)) {
-        //     throw new DecodeError("Insufficient data");
-        // }
+        if (!this.hasRemaining(byteLength + headOffset)) {
+            throw new DecodeError_1.DecodeError("Insufficient data");
+        }
         const offset = this.pos + headOffset;
         const object = this.bytes.subarray(offset, offset + byteLength);
         this.pos += headOffset + byteLength;
@@ -340,14 +340,6 @@ class Decoder {
         // }
         const offset = this.pos + headerOffset;
         let object;
-        // if (this.stateIsMapKey() && this.keyDecoder?.canBeCached(byteLength)) {
-        //     object = this.keyDecoder.decode(this.bytes, offset, byteLength);
-        // } else if (byteLength > TEXT_DECODER_THRESHOLD) {
-        //     object = utf8DecodeTD(this.bytes, offset, byteLength);
-        // } else {
-        //     object = utf8Decode(this.bytes, offset, byteLength);
-        // }
-        // TODO
         object = (0, utf8_1.utf8Decode)(this.bytes, offset, byteLength);
         this.pos += headerOffset + byteLength;
         return object;
@@ -379,7 +371,7 @@ class Decoder {
         this.headByte = HEAD_BYTE_REQUIRED;
     }
     readHeadByte() {
-        if (this.headByte === HEAD_BYTE_REQUIRED) {
+        if (this.headByte == HEAD_BYTE_REQUIRED) {
             this.headByte = this.readU8();
         }
         return this.headByte;
